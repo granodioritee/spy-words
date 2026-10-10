@@ -178,7 +178,11 @@ select.inp option{color:var(--ink)}
 details.rules{font-size:13.5px;line-height:1.6;color:var(--muted)}
 details.rules summary{cursor:pointer;color:var(--text);font:600 12px var(--f-mono);letter-spacing:.14em;text-transform:uppercase}
 details.rules ul{margin:10px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:5px}
+.credit{text-align:center;font:500 11.5px var(--f-mono);letter-spacing:.04em;color:var(--faint);padding-top:2px}
+.credit a{color:var(--muted)}
+.credit a:hover{color:var(--accent)}
 </style>
+<script src="analytics.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -281,11 +285,14 @@ details.rules ul{margin:10px 0 0;padding-left:18px;display:flex;flex-direction:c
       <li>You can end your turn after at least one guess. The team that goes first has 9 words, the other has 8. First team to uncover all of theirs wins.</li>
     </ul>
   </details>
+  <footer class="credit">Made by <a href="https://github.com/granodioritee" target="_blank" rel="noopener">granodioritee</a> · <a href="https://github.com/granodioritee/spy-words" target="_blank" rel="noopener" id="starLink">⭐ Star on GitHub</a></footer>
 </div>
 
 <script src="firebase-config.js"></script>
 <script>
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+/* analytics.js defines gaEvent; if it's blocked, tracking quietly does nothing */
+const track = (name, params) => { try { if(window.gaEvent) window.gaEvent(name, params); } catch(e){} };
 const store = {
   get(k, d){ try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch(e){ return d; } },
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
@@ -455,6 +462,7 @@ async function joinRoom(c, create){
     F.onValue(F.ref(F.db, path("cfg")), s => { const v = s.val() || {}; cfg = { lang:v.lang === "en" ? "en" : "id", adult:v.adult === true }; render(); }),
   ];
   S.join();
+  track(create ? "room_create" : "room_join");
   render();
 }
 
@@ -636,7 +644,8 @@ function startGame(){
     game:{ id, first, lang, adult, words, by:uid, at:F.serverTimestamp() },
     [`roster/${id}`]: ros,
     [`key/${id}`]: Object.assign({}, k),
-  }).catch(e => { console.error(e); setSetupMsg(`Couldn't start the game (${errWhy(e)}). Try again.`, true); })
+  }).then(() => track("game_start", { players:Object.keys(ros).length, lang, adult }))
+    .catch(e => { console.error(e); setSetupMsg(`Couldn't start the game (${errWhy(e)}). Try again.`, true); })
     .finally(() => { $("#start").disabled = false; });
 }
 function lateJoin(team){
@@ -815,7 +824,11 @@ function playNews(){
   if(st.events <= seenEvents) return;
   seenEvents = st.events;
   const l = st.last; if(!l) return;
-  if(st.over){ if(st.how === "assassin") S.boom(); else S.win(); }
+  if(st.over){
+    if(st.how === "assassin") S.boom(); else S.win();
+    const me = myRole();
+    track("game_end", { winner:TEAM[st.winner], how:st.how, my_team_won:me ? me.team === st.winner : null, clues:st.history.length });
+  }
   else if(l.k === "clue") S.clue();
   else if(l.k === "guess") S[l.c === l.team ? "good" : l.c === "n" ? "meh" : "bad"]();
   if(l.k === "guess") freshCard = l.i;
@@ -851,6 +864,7 @@ function setCfg(change){
 $$("#langSeg button").forEach(b => b.addEventListener("click", () => setCfg({ lang:b.dataset.lang })));
 $$("#adultSeg button").forEach(b => b.addEventListener("click", () => setCfg({ adult:b.dataset.adult === "1" })));
 $("#start").addEventListener("click", startGame);
+$("#starLink").addEventListener("click", () => track("github_click"));
 $("#giveClue").addEventListener("click", giveClue);
 $("#clueWord").addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); giveClue(); } });
 $("#endTurn").addEventListener("click", endTurn);
