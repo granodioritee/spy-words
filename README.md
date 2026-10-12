@@ -24,4 +24,4 @@ One HTML file with no build step, hosted on GitHub Pages, with Firebase Realtime
 
 ---
 
-Made by [granodioritee](https://github.com/granodioritee). Also try [Make it 24](https://github.com/granodioritee/make-it-24) and [Werewolf](https://github.com/granodioritee/werewolf).
+Made by [granodioritee](https://github.com/granodioritee). Also try [Make it 24](https://github.com/granodioritee/make-it-24), [Werewolf](https://github.com/granodioritee/werewolf) and [Blend In](https://github.com/granodioritee/blend-in).
